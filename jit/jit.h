@@ -2,32 +2,29 @@
 
 #include <memory>
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/LLVMContext.h"
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
+#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 
 namespace jit
 {
+/// Just-in-time compiler.
 class JIT
 {
 public:
-    explicit JIT( llvm::JITTargetMachineBuilder i_targetMachineBuilder, llvm::DataLayout i_dataLayout );
+    explicit JIT( llvm::orc::JITTargetMachineBuilder i_targetMachineBuilder, llvm::DataLayout i_dataLayout );
+
+    /// Create a new instance of the JIT.
+    static llvm::Expected< std::unique_ptr< JIT > > Create();
 
 private:
-    llvm::ExecutionSession         m_executionSession;
-    llvm::RTDyldObjectLinkingLayer m_objectLayer;
-    llvm::IRCompileLayer           m_compileLayer;
+    llvm::orc::ExecutionSession         m_executionSession;
+    llvm::orc::RTDyldObjectLinkingLayer m_objectLayer;
+    llvm::orc::IRCompileLayer           m_compileLayer;
+    llvm::orc::MangleAndInterner        m_mangler;
+    llvm::orc::ThreadSafeContext        m_context;
 
-    llvm::DataLayout        m_dataLayout;
-    llvm::MangleAndInterner m_mangler;
-    llvm::ThreadSafeContext m_context;
-}
+    llvm::DataLayout m_dataLayout;
+};
 } // namespace jit
