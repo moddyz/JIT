@@ -14,8 +14,10 @@ endif()
 
 # Load CMake modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/macros")
 set(LLVM_STATIC TRUE)
 find_package(LLVM REQUIRED)
+include(Public)
 
 # Build with C++14
 set(CMAKE_CXX_STANDARD 14)
@@ -24,5 +26,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Compiler options
 add_compile_options(-g -O3 -Werror)
 
-# Build JIT targets.
-add_subdirectory(jit)
+# Build lib and program targets.
+add_subdirectory(lib)
+add_subdirectory(program)
