@@ -17,6 +17,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/macros")
 set(LLVM_STATIC TRUE)
 find_package(LLVM REQUIRED)
+find_package(Clang REQUIRED)
 include(Public)
 
 # Build with C++14

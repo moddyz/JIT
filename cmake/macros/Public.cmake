@@ -8,6 +8,7 @@ function(jit_program PROGRAM_NAME)
 
     set(multiValueArgs
         CPPFILES
+        INCLUDE_PATHS
         LIBRARIES
     )
 
@@ -21,8 +22,8 @@ function(jit_program PROGRAM_NAME)
     # Build executable
     add_executable(${PROGRAM_NAME} ${args_CPPFILES})
 
-    target_include_directories(
-        ${PROGRAM_NAME} PRIVATE ${CMAKE_BINARY_DIR}/include
+    target_include_directories(${PROGRAM_NAME} 
+        PRIVATE ${CMAKE_BINARY_DIR}/include ${args_INCLUDE_PATHS}
     )
 
     target_link_libraries(
