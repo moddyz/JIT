@@ -135,35 +135,35 @@ int main( int argc, const char** argv )
 {
     // This just needs to be some symbol in the binary; C++ doesn't
     // allow taking the address of ::main however.
-    void*                                                 mainAddr       = ( void* ) ( intptr_t ) GetExecutablePath;
-    std::string                                           executablePath = GetExecutablePath( argv[ 0 ], mainAddr );
-    clang::IntrusiveRefCntPtr< clang::DiagnosticOptions > DiagOpts       = new clang::DiagnosticOptions();
-    clang::TextDiagnosticPrinter* DiagClient = new clang::TextDiagnosticPrinter( llvm::errs(), &*DiagOpts );
+    void*                                                 mainAddr          = ( void* ) ( intptr_t ) GetExecutablePath;
+    std::string                                           executablePath    = GetExecutablePath( argv[ 0 ], mainAddr );
+    clang::IntrusiveRefCntPtr< clang::DiagnosticOptions > diagnosticOptions = new clang::DiagnosticOptions();
+    clang::TextDiagnosticPrinter* DiagClient = new clang::TextDiagnosticPrinter( llvm::errs(), &*diagnosticOptions );
 
     clang::IntrusiveRefCntPtr< clang::DiagnosticIDs > diagnosticIds( new clang::DiagnosticIDs() );
-    clang::DiagnosticsEngine                          diagnosticsEngine( diagnosticIds, &*DiagOpts, DiagClient );
+    clang::DiagnosticsEngine diagnosticsEngine( diagnosticIds, &*diagnosticOptions, DiagClient );
 
-    const std::string TripleStr = llvm::sys::getProcessTriple();
-    llvm::Triple      T( TripleStr );
+    const std::string tripleStr = llvm::sys::getProcessTriple();
+    llvm::Triple      triple( tripleStr );
 
     // Use ELF on Windows-32 and MingW for now.
 #ifndef CLANG_INTERPRETER_COFF_FORMAT
-    if ( T.isOSBinFormatCOFF() )
-        T.setObjectFormat( llvm::Triple::ELF );
+    if ( triple.isOSBinFormatCOFF() )
+        triple.setObjectFormat( llvm::Triple::ELF );
 #endif
 
     g_exitOnError.setBanner( "clang interpreter" );
 
-    clang::driver::Driver clangDriver( executablePath, T.str(), diagnosticsEngine );
+    clang::driver::Driver clangDriver( executablePath, triple.str(), diagnosticsEngine );
     clangDriver.setTitle( "clang interpreter" );
     clangDriver.setCheckInputsExist( false );
 
     // FIXME: This is a hack to try to force the driver to do something we can
     // recognize. We need to extend the driver library to support this use model
     // (basically, exactly one input, and the operation mode is hard wired).
-    clang::SmallVector< const char*, 16 > Args( argv, argv + argc );
-    Args.push_back( "-fsyntax-only" );
-    std::unique_ptr< clang::driver::Compilation > clangCompilation( clangDriver.BuildCompilation( Args ) );
+    clang::SmallVector< const char*, 16 > args( argv, argv + argc );
+    args.push_back( "-fsyntax-only" );
+    std::unique_ptr< clang::driver::Compilation > clangCompilation( clangDriver.BuildCompilation( args ) );
     if ( !clangCompilation )
         return 0;
 
@@ -233,13 +233,13 @@ int main( int argc, const char** argv )
 
     int                                  result = 255;
     std::unique_ptr< llvm::LLVMContext > llvmContext( codeGenAction->takeLLVMContext() );
-    std::unique_ptr< llvm::Module >      Module = codeGenAction->takeModule();
+    std::unique_ptr< llvm::Module >      module = codeGenAction->takeModule();
 
-    if ( Module )
+    if ( module )
     {
         std::unique_ptr< SimpleJIT > J = g_exitOnError( SimpleJIT::Create() );
 
-        g_exitOnError( J->addModule( llvm::orc::ThreadSafeModule( std::move( Module ), std::move( llvmContext ) ) ) );
+        g_exitOnError( J->addModule( llvm::orc::ThreadSafeModule( std::move( module ), std::move( llvmContext ) ) ) );
         int ( *Main )( ... ) = ( int ( * )( ... ) ) g_exitOnError( J->getSymbolAddress( "main" ) );
         result               = Main();
         printf( "Main: %d\n", result );
