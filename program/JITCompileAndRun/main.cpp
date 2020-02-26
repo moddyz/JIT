@@ -33,110 +33,115 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
-using namespace clang;
-using namespace clang::driver;
-
 // This function isn't referenced outside its translation unit, but it
 // can't use the "static" keyword because its address is used for
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string GetExecutablePath( const char* Argv0, void* MainAddr )
+std::string GetExecutablePath( const char* Argv0, void* mainAddr )
 {
-    return llvm::sys::fs::getMainExecutable( Argv0, MainAddr );
+    return llvm::sys::fs::getMainExecutable( Argv0, mainAddr );
 }
 
-namespace llvm
-{
-namespace orc
-{
 class SimpleJIT
 {
 private:
-    ExecutionSession                 ES;
-    std::unique_ptr< TargetMachine > TM;
-    const DataLayout                 DL;
-    MangleAndInterner                Mangle{ES, DL};
-    RTDyldObjectLinkingLayer         ObjectLayer{ES, createMemMgr};
-    IRCompileLayer                   CompileLayer{ES, ObjectLayer, SimpleCompiler( *TM )};
+    llvm::orc::ExecutionSession            m_executionSession;
+    std::unique_ptr< llvm::TargetMachine > m_targetMachine;
+    const llvm::DataLayout                 m_dataLayout;
+    llvm::orc::MangleAndInterner           m_mangler{m_executionSession, m_dataLayout};
+    llvm::orc::RTDyldObjectLinkingLayer    m_objectLayer{m_executionSession, createMemMgr};
+    llvm::orc::IRCompileLayer              m_compileLayer{m_executionSession,
+                                             m_objectLayer,
+                                             llvm::orc::SimpleCompiler( *m_targetMachine )};
 
-    static std::unique_ptr< SectionMemoryManager > createMemMgr()
+    static std::unique_ptr< llvm::SectionMemoryManager > createMemMgr()
     {
-        return llvm::make_unique< SectionMemoryManager >();
+        return std::make_unique< llvm::SectionMemoryManager >();
     }
 
-    SimpleJIT( std::unique_ptr< TargetMachine > TM,
-               DataLayout                       DL,
-               DynamicLibrarySearchGenerator    ProcessSymbolsGenerator )
-        : TM( std::move( TM ) )
-        , DL( std::move( DL ) )
+    SimpleJIT( std::unique_ptr< llvm::TargetMachine >   i_targetMachine,
+               llvm::DataLayout                         i_dataLayout,
+               llvm::orc::DynamicLibrarySearchGenerator i_processSymbolsGenerator )
+        : m_targetMachine( std::move( i_targetMachine ) )
+        , m_dataLayout( std::move( i_dataLayout ) )
     {
         llvm::sys::DynamicLibrary::LoadLibraryPermanently( nullptr );
-        ES.getMainJITDylib().setGenerator( std::move( ProcessSymbolsGenerator ) );
+        m_executionSession.getMainJITDylib().setGenerator( std::move( i_processSymbolsGenerator ) );
     }
 
 public:
-    static Expected< std::unique_ptr< SimpleJIT > > Create()
+    static llvm::Expected< std::unique_ptr< SimpleJIT > > Create()
     {
-        auto JTMB = JITTargetMachineBuilder::detectHost();
-        if ( !JTMB )
-            return JTMB.takeError();
+        llvm::Expected< llvm::orc::JITTargetMachineBuilder > jitTargetMachineBuilder =
+            llvm::orc::JITTargetMachineBuilder::detectHost();
+        if ( !jitTargetMachineBuilder )
+        {
+            return jitTargetMachineBuilder.takeError();
+        }
 
-        auto TM = JTMB->createTargetMachine();
-        if ( !TM )
-            return TM.takeError();
+        llvm::Expected< std::unique_ptr< llvm::TargetMachine > > targetMachine =
+            jitTargetMachineBuilder->createTargetMachine();
+        if ( !targetMachine )
+        {
+            return targetMachine.takeError();
+        }
 
-        auto DL = ( *TM )->createDataLayout();
+        llvm::DataLayout dataLayout = ( *targetMachine )->createDataLayout();
 
-        auto ProcessSymbolsGenerator = DynamicLibrarySearchGenerator::GetForCurrentProcess( DL.getGlobalPrefix() );
+        llvm::Expected< llvm::orc::DynamicLibrarySearchGenerator > processSymbolsGenerator =
+            llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess( dataLayout.getGlobalPrefix() );
 
-        if ( !ProcessSymbolsGenerator )
-            return ProcessSymbolsGenerator.takeError();
+        if ( !processSymbolsGenerator )
+        {
+            return processSymbolsGenerator.takeError();
+        }
 
-        return std::unique_ptr< SimpleJIT >(
-            new SimpleJIT( std::move( *TM ), std::move( DL ), std::move( *ProcessSymbolsGenerator ) ) );
+        return std::unique_ptr< SimpleJIT >( new SimpleJIT( std::move( *targetMachine ),
+                                                            std::move( dataLayout ),
+                                                            std::move( *processSymbolsGenerator ) ) );
     }
 
-    const TargetMachine& getTargetMachine() const
+    const llvm::TargetMachine& getTargetMachine() const
     {
-        return *TM;
+        return *m_targetMachine;
     }
 
-    Error addModule( ThreadSafeModule M )
+    llvm::Error addModule( llvm::orc::ThreadSafeModule i_module )
     {
-        return CompileLayer.add( ES.getMainJITDylib(), std::move( M ) );
+        return m_compileLayer.add( m_executionSession.getMainJITDylib(), std::move( i_module ) );
     }
 
-    Expected< JITEvaluatedSymbol > findSymbol( const StringRef& Name )
+    llvm::Expected< llvm::JITEvaluatedSymbol > findSymbol( const llvm::StringRef& i_name )
     {
-        return ES.lookup( {&ES.getMainJITDylib()}, Mangle( Name ) );
+        return m_executionSession.lookup( {&m_executionSession.getMainJITDylib()}, m_mangler( i_name ) );
     }
 
-    Expected< JITTargetAddress > getSymbolAddress( const StringRef& Name )
+    llvm::Expected< llvm::JITTargetAddress > getSymbolAddress( const llvm::StringRef& i_name )
     {
-        auto Sym = findSymbol( Name );
-        if ( !Sym )
-            return Sym.takeError();
-        return Sym->getAddress();
+        llvm::Expected< llvm::JITEvaluatedSymbol > symbol = findSymbol( i_name );
+        if ( !symbol )
+        {
+            return symbol.takeError();
+        }
+
+        return symbol->getAddress();
     }
 };
 
-} // end namespace orc
-} // end namespace llvm
-
-llvm::ExitOnError ExitOnErr;
+llvm::ExitOnError g_exitOnError;
 
 int main( int argc, const char** argv )
 {
     // This just needs to be some symbol in the binary; C++ doesn't
     // allow taking the address of ::main however.
-    void*                                   MainAddr   = ( void* ) ( intptr_t ) GetExecutablePath;
-    std::string                             Path       = GetExecutablePath( argv[ 0 ], MainAddr );
-    IntrusiveRefCntPtr< DiagnosticOptions > DiagOpts   = new DiagnosticOptions();
-    TextDiagnosticPrinter*                  DiagClient = new TextDiagnosticPrinter( llvm::errs(), &*DiagOpts );
+    void*                                                 mainAddr       = ( void* ) ( intptr_t ) GetExecutablePath;
+    std::string                                           executablePath = GetExecutablePath( argv[ 0 ], mainAddr );
+    clang::IntrusiveRefCntPtr< clang::DiagnosticOptions > DiagOpts       = new clang::DiagnosticOptions();
+    clang::TextDiagnosticPrinter* DiagClient = new clang::TextDiagnosticPrinter( llvm::errs(), &*DiagOpts );
 
-    IntrusiveRefCntPtr< DiagnosticIDs > DiagID( new DiagnosticIDs() );
-    DiagnosticsEngine                   Diags( DiagID, &*DiagOpts, DiagClient );
+    clang::IntrusiveRefCntPtr< clang::DiagnosticIDs > diagnosticIds( new clang::DiagnosticIDs() );
+    clang::DiagnosticsEngine                          diagnosticsEngine( diagnosticIds, &*DiagOpts, DiagClient );
 
     const std::string TripleStr = llvm::sys::getProcessTriple();
     llvm::Triple      T( TripleStr );
@@ -147,52 +152,52 @@ int main( int argc, const char** argv )
         T.setObjectFormat( llvm::Triple::ELF );
 #endif
 
-    ExitOnErr.setBanner( "clang interpreter" );
+    g_exitOnError.setBanner( "clang interpreter" );
 
-    Driver TheDriver( Path, T.str(), Diags );
-    TheDriver.setTitle( "clang interpreter" );
-    TheDriver.setCheckInputsExist( false );
+    clang::driver::Driver clangDriver( executablePath, T.str(), diagnosticsEngine );
+    clangDriver.setTitle( "clang interpreter" );
+    clangDriver.setCheckInputsExist( false );
 
     // FIXME: This is a hack to try to force the driver to do something we can
     // recognize. We need to extend the driver library to support this use model
     // (basically, exactly one input, and the operation mode is hard wired).
-    SmallVector< const char*, 16 > Args( argv, argv + argc );
+    clang::SmallVector< const char*, 16 > Args( argv, argv + argc );
     Args.push_back( "-fsyntax-only" );
-    std::unique_ptr< Compilation > C( TheDriver.BuildCompilation( Args ) );
-    if ( !C )
+    std::unique_ptr< clang::driver::Compilation > clangCompilation( clangDriver.BuildCompilation( Args ) );
+    if ( !clangCompilation )
         return 0;
 
     // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
 
     // We expect to get back exactly one command job, if we didn't something
     // failed. Extract that job from the compilation.
-    const driver::JobList& Jobs = C->getJobs();
-    if ( Jobs.size() != 1 || !isa< driver::Command >( *Jobs.begin() ) )
+    const clang::driver::JobList& Jobs = clangCompilation->getJobs();
+    if ( Jobs.size() != 1 || !clang::isa< clang::driver::Command >( *Jobs.begin() ) )
     {
-        SmallString< 256 >        Msg;
+        clang::SmallString< 256 > Msg;
         llvm::raw_svector_ostream OS( Msg );
         Jobs.Print( OS, "; ", true );
-        Diags.Report( diag::err_fe_expected_compiler_job ) << OS.str();
+        diagnosticsEngine.Report( clang::diag::err_fe_expected_compiler_job ) << OS.str();
         return 1;
     }
 
-    const driver::Command& Cmd = cast< driver::Command >( *Jobs.begin() );
+    const clang::driver::Command& Cmd = clang::cast< clang::driver::Command >( *Jobs.begin() );
     if ( llvm::StringRef( Cmd.getCreator().getName() ) != "clang" )
     {
-        Diags.Report( diag::err_fe_expected_clang_command );
+        diagnosticsEngine.Report( clang::diag::err_fe_expected_clang_command );
         return 1;
     }
 
     // Initialize a compiler invocation object from the clang (-cc1) arguments.
-    const llvm::opt::ArgStringList&       CCArgs = Cmd.getArguments();
-    std::unique_ptr< CompilerInvocation > CI( new CompilerInvocation );
-    CompilerInvocation::CreateFromArgs( *CI,
-                                        const_cast< const char** >( CCArgs.data() ),
-                                        const_cast< const char** >( CCArgs.data() ) + CCArgs.size(),
-                                        Diags );
+    const llvm::opt::ArgStringList&              compilerArgs = Cmd.getArguments();
+    std::unique_ptr< clang::CompilerInvocation > compilerInvocation( new clang::CompilerInvocation );
+    clang::CompilerInvocation::CreateFromArgs( *compilerInvocation,
+                                               const_cast< const char** >( compilerArgs.data() ),
+                                               const_cast< const char** >( compilerArgs.data() ) + compilerArgs.size(),
+                                               diagnosticsEngine );
 
     // Show the invocation, with -v.
-    if ( CI->getHeaderSearchOpts().Verbose )
+    if ( compilerInvocation->getHeaderSearchOpts().Verbose )
     {
         llvm::errs() << "clang invocation:\n";
         Jobs.Print( llvm::errs(), "\n", true );
@@ -202,41 +207,46 @@ int main( int argc, const char** argv )
     // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
 
     // Create a compiler instance to handle the actual work.
-    CompilerInstance Clang;
-    Clang.setInvocation( std::move( CI ) );
+    clang::CompilerInstance compilerInstance;
+    compilerInstance.setInvocation( std::move( compilerInvocation ) );
 
     // Create the compilers actual diagnostics engine.
-    Clang.createDiagnostics();
-    if ( !Clang.hasDiagnostics() )
+    compilerInstance.createDiagnostics();
+    if ( !compilerInstance.hasDiagnostics() )
         return 1;
 
     // Infer the builtin include path if unspecified.
-    if ( Clang.getHeaderSearchOpts().UseBuiltinIncludes && Clang.getHeaderSearchOpts().ResourceDir.empty() )
-        Clang.getHeaderSearchOpts().ResourceDir = CompilerInvocation::GetResourcesPath( argv[ 0 ], MainAddr );
+    if ( compilerInstance.getHeaderSearchOpts().UseBuiltinIncludes &&
+         compilerInstance.getHeaderSearchOpts().ResourceDir.empty() )
+    {
+        compilerInstance.getHeaderSearchOpts().ResourceDir =
+            clang::CompilerInvocation::GetResourcesPath( argv[ 0 ], mainAddr );
+    }
 
     // Create and execute the frontend to generate an LLVM bitcode module.
-    std::unique_ptr< CodeGenAction > Act( new EmitLLVMOnlyAction() );
-    if ( !Clang.ExecuteAction( *Act ) )
+    std::unique_ptr< clang::CodeGenAction > codeGenAction( new clang::EmitLLVMOnlyAction() );
+    if ( !compilerInstance.ExecuteAction( *codeGenAction ) )
         return 1;
 
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
-    int                                  Res = 255;
-    std::unique_ptr< llvm::LLVMContext > Ctx( Act->takeLLVMContext() );
-    std::unique_ptr< llvm::Module >      Module = Act->takeModule();
+    int                                  result = 255;
+    std::unique_ptr< llvm::LLVMContext > llvmContext( codeGenAction->takeLLVMContext() );
+    std::unique_ptr< llvm::Module >      Module = codeGenAction->takeModule();
 
     if ( Module )
     {
-        auto J = ExitOnErr( llvm::orc::SimpleJIT::Create() );
+        std::unique_ptr< SimpleJIT > J = g_exitOnError( SimpleJIT::Create() );
 
-        ExitOnErr( J->addModule( llvm::orc::ThreadSafeModule( std::move( Module ), std::move( Ctx ) ) ) );
-        auto Main = ( int ( * )( ... ) ) ExitOnErr( J->getSymbolAddress( "main" ) );
-        Res       = Main();
+        g_exitOnError( J->addModule( llvm::orc::ThreadSafeModule( std::move( Module ), std::move( llvmContext ) ) ) );
+        int ( *Main )( ... ) = ( int ( * )( ... ) ) g_exitOnError( J->getSymbolAddress( "main" ) );
+        result               = Main();
+        printf( "Main: %d\n", result );
     }
 
     // Shutdown.
     llvm::llvm_shutdown();
 
-    return Res;
+    return result;
 }
