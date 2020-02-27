@@ -135,13 +135,15 @@ int main( int argc, const char** argv )
 {
     // This just needs to be some symbol in the binary; C++ doesn't
     // allow taking the address of ::main however.
-    void*                                                 mainAddr          = ( void* ) ( intptr_t ) GetExecutablePath;
-    std::string                                           executablePath    = GetExecutablePath( argv[ 0 ], mainAddr );
+    void*       mainAddr       = ( void* ) ( intptr_t ) GetExecutablePath;
+    std::string executablePath = GetExecutablePath( argv[ 0 ], mainAddr );
+    printf( "Executable Path: %s\n", executablePath.c_str() );
     clang::IntrusiveRefCntPtr< clang::DiagnosticOptions > diagnosticOptions = new clang::DiagnosticOptions();
-    clang::TextDiagnosticPrinter* DiagClient = new clang::TextDiagnosticPrinter( llvm::errs(), &*diagnosticOptions );
+    clang::TextDiagnosticPrinter*                         diagnosticPrinter =
+        new clang::TextDiagnosticPrinter( llvm::errs(), &*diagnosticOptions );
 
     clang::IntrusiveRefCntPtr< clang::DiagnosticIDs > diagnosticIds( new clang::DiagnosticIDs() );
-    clang::DiagnosticsEngine diagnosticsEngine( diagnosticIds, &*diagnosticOptions, DiagClient );
+    clang::DiagnosticsEngine diagnosticsEngine( diagnosticIds, &*diagnosticOptions, diagnosticPrinter );
 
     const std::string tripleStr = llvm::sys::getProcessTriple();
     llvm::Triple      triple( tripleStr );
