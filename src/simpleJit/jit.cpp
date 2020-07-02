@@ -1,4 +1,4 @@
-#include <jit/jit.h>
+#include <simpleJit/jit.h>
 
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>

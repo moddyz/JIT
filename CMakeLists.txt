@@ -1,32 +1,26 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.17)
 
 # Project Name
 project(
-    JIT VERSION 0.0
-    DESCRIPTION "Just In Time compiler."
+    LLVMExperiments
+    VERSION 0.0
+    DESCRIPTION "Experiments with LLVM and Clang."
     LANGUAGES CXX
 )
 
 # Cross-platform compatibility.
-if (UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif()
 
-# Load CMake modules
-list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/modules")
-list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/cmake/macros")
+# Discover modules & macros.
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+                      ${CMAKE_SOURCE_DIR}/cmake/modules
+                      ${CMAKE_SOURCE_DIR}/cmake/macros)
+include(Public)
 set(LLVM_STATIC TRUE)
 find_package(LLVM REQUIRED)
 find_package(Clang REQUIRED)
-include(Public)
 
-# Build with C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-# Compiler options
-add_compile_options(-g -O3 -Werror)
-
-# Build lib and program targets.
-add_subdirectory(lib)
-add_subdirectory(program)
+# Recurse into src/.
+add_subdirectory(src)

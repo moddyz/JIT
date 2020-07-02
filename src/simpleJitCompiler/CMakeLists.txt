@@ -1,4 +1,4 @@
-jit_program(JITCompileAndRun
+cpp_program(simpleJitCompiler
     CPPFILES
         main.cpp
 
@@ -13,3 +13,4 @@ jit_program(JITCompileAndRun
         ${CLANG_INCLUDE_DIRS}
         ${LLVM_INCLUDES}
 )
+

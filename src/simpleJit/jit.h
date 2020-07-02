@@ -22,9 +22,8 @@ private:
     llvm::orc::ExecutionSession         m_executionSession;
     llvm::orc::RTDyldObjectLinkingLayer m_objectLayer;
     llvm::orc::IRCompileLayer           m_compileLayer;
+    llvm::DataLayout                    m_dataLayout;
     llvm::orc::MangleAndInterner        m_mangler;
     llvm::orc::ThreadSafeContext        m_context;
-
-    llvm::DataLayout m_dataLayout;
 };
 } // namespace jit

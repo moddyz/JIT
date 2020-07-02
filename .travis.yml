@@ -12,6 +12,7 @@ jobs:
           packages:
             - cmake
             - llvm@9
+            - clang@9
           update: true
 
 # llvm 9 installation is difficult.
@@ -37,4 +38,4 @@ branches:
   only:
     - master
 
-script: ./build.sh ~/jit
+script: ./build.sh /tmp/build

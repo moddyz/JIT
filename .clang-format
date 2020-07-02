@@ -4,6 +4,7 @@ AlignConsecutiveDeclarations: true
 AllowAllArgumentsOnNextLine: false
 AllowAllConstructorInitializersOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
+AlwaysBreakTemplateDeclarations: Yes
 AllowShortBlocksOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
@@ -19,7 +20,6 @@ CompactNamespaces: false
 ContinuationIndentWidth: 4
 FixNamespaceComments: true
 IndentCaseLabels: false
-IndentPPDirectives: AfterHash
 IndentWidth: 4
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
