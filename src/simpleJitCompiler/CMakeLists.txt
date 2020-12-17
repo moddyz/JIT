@@ -1,10 +1,8 @@
-cpp_program(simpleJitCompiler
+cpp_executable(simpleJitCompiler
     CPPFILES
         main.cpp
 
     LIBRARIES
-        ${CLANG_LIBRARIES}
-        ${LLVM_LIBRARIES}
         dl
         pthread
         tinfo

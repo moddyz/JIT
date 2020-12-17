@@ -54,7 +54,9 @@ else()
               /mingw64/lib
               /c/msys64/mingw64/lib
               c:\\msys64\\mingw64\\lib)
+
       if(CLANG_${_prettylibname_}_LIB)
+            message(STATUS CLANG_${_prettylibname_}_LIB)
           set(CLANG_LIBRARIES ${CLANG_LIBRARIES} ${CLANG_${_prettylibname_}_LIB})
       endif()
   endmacro(FIND_AND_ADD_CLANG_LIB)
@@ -81,6 +83,7 @@ else()
   FIND_AND_ADD_CLANG_LIB(clangRewrite)
   FIND_AND_ADD_CLANG_LIB(clangCrossTU)
   FIND_AND_ADD_CLANG_LIB(clangIndex)
+  FIND_AND_ADD_CLANG_LIB(clang)
 endif()
 
 include(FindPackageHandleStandardArgs)
