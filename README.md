@@ -1,35 +1,31 @@
-# LLVMExperiments
+<a href="https://github.com/moddyz/LLVMSandbox/actions?query=workflow%3A%22Build+and+test%22"><img src="https://github.com/moddyz/LLVMSandbox/workflows/Build%20and%20test/badge.svg"/></a>
 
-A collection of experiments with LLVM and Clang libraries.
+# LLVMSandbox
+
+Sandbox for experimenting with LLVM and Clang.
 
 ## Table of Contents
 
+- [Dependencies](#dependencies)
 - [Building](#building)
-  - [Requirements](#requirements)
-- [Build Status](#build-status)
 
-## Documentation
+### Dependencies
 
-Documentation based on the latest state of master, [hosted by GitHub Pages](https://moddyz.github.io/LLVMExperiments/).
+The following dependencies are mandatory:
+- C++ compiler
+- [CMake](https://cmake.org/documentation/) (3.12 or greater)
+- [LLVM](http://llvm.org/)
 
 ## Building
 
-A convenience build script is also provided, for building all targets, and optionally installing to a location:
+Example snippet for building this project:
 ```
-./build.sh <OPTIONAL_INSTALL_LOCATION>
+mkdir build && cd build
+cmake -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX="/apps/LLVMSandbox/" ..
+cmake --build  . -- VERBOSE=1 -j8 all test install
 ```
+CMake options for configuring this project:
 
-### Requirements
-
-- `>= CMake-3.17`
-- `>= C++17`
-- `doxygen` and `graphviz` (optional for documentation)
-- \>= `llvm-9.0.1`
-- \>= `clang-9.0.1`
-
-## Build Status
-
-|       | master | 
-| ----- | ------ | 
-| macOS-10.14 | [![Build Status](https://travis-ci.com/moddyz/LLVMExperiments.svg?branch=master)](https://travis-ci.com/moddyz/LLVMExperiments) |
-
+| CMake Variable name     | Description                                                            | Default |
+| ----------------------- | ---------------------------------------------------------------------- | ------- |
+| `BUILD_TESTING`         | Enable automated testing.                                              | `OFF`   |
