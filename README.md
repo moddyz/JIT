@@ -14,7 +14,7 @@ Sandbox for experimenting with LLVM and Clang.
 The following dependencies are mandatory:
 - C++ compiler
 - [CMake](https://cmake.org/documentation/) (3.12 or greater)
-- [LLVM](http://llvm.org/)
+- [LLVM and clang](http://llvm.org/)
 
 ## Building
 
