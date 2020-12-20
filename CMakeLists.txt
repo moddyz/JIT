@@ -29,4 +29,4 @@ include(Packages)
 add_subdirectory(src)
 
 # Install exported targets.
-export_project(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in)
+#export_project(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in)

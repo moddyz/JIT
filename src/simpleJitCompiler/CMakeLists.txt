@@ -3,6 +3,24 @@ cpp_executable(simpleJitCompiler
         main.cpp
 
     LIBRARIES
+        LLVMCore
+        LLVMExecutionEngine
+        LLVMMC
+        LLVMMCJIT
+        LLVMObject
+        LLVMOrcJIT
+        LLVMOption
+        LLVMRuntimeDyld
+        LLVMSupport
+        LLVMTarget
+        LLVMX86Desc
+        LLVMX86Disassembler
+        LLVMX86CodeGen
+        clangBasic
+        clangCodeGen
+        clangDriver
+        clangFrontend
+        clangSerialization
         dl
         pthread
         tinfo
@@ -11,4 +29,3 @@ cpp_executable(simpleJitCompiler
         ${CLANG_INCLUDE_DIRS}
         ${LLVM_INCLUDES}
 )
-
